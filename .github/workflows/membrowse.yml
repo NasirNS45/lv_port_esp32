@@ -1,0 +1,53 @@
+name: ESP32 LVGL Memory Analysis
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Checkout repo (with components)
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          submodules: true
+
+      # 2. Setup ESP-IDF
+      - name: Setup ESP-IDF
+        uses: espressif/esp-idf-ci-action@v1
+        with:
+          esp_idf_version: v4.4
+          target: esp32
+
+      # 3. Build firmware
+      - name: Build firmware
+        run: |
+          idf.py build
+
+      # 4. Ensure ELF exists
+      - name: Verify ELF
+        run: |
+          ls -lh build/*.elf
+
+      # 5. Run MemBrowse
+      - name: Analyze memory with MemBrowse
+        id: analyze
+        uses: membrowse/membrowse-action@v1
+        with:
+          elf: build/lv_port_esp32.elf
+          ld: esp-idf/components/esp_system/ld/esp32.ld
+          target_name: esp32
+          api_key: ${{ secrets.MEMBROWSE_API_KEY }}
+
+      # 6. Upload artifacts
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: esp32-membrowse
+          path: |
+            build/lv_port_esp32.elf
+            ${{ steps.analyze.outputs.report_path }}
