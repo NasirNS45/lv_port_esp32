@@ -1,4 +1,4 @@
-name: ESP32 LVGL Memory Analysis
+name: ESP32 LVGL + MemBrowse
 
 on:
   push:
@@ -6,55 +6,39 @@ on:
   pull_request:
 
 jobs:
-  analyze:
+  build:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Checkout repo
-      - name: Checkout repository
-        uses: actions/checkout@v3
+      - name: Checkout repo
+        uses: actions/checkout@v4
         with:
-          submodules: true
+          submodules: recursive
 
-      # 2. Setup ESP-IDF
       - name: Setup ESP-IDF
         uses: espressif/esp-idf-ci-action@v1
         with:
-          esp_idf_version: v4.4
+          esp_idf_version: v5.1
           target: esp32
 
-      - name: Debug ESP-IDF location
-        run: |
-          ls -lah
-          ls -lah esp-idf
-
-      # 3. Build firmware (IMPORTANT FIX)
       - name: Build firmware
         shell: bash
         run: |
-          source ./esp-idf/export.sh
           idf.py build
 
-      # 4. Verify ELF
       - name: Verify ELF
         run: |
-          ls -lh build/*.elf
+          test -f build/lv_port_esp32.elf
 
-      # 5. Run MemBrowse
-      - name: Analyze memory with MemBrowse
-        id: analyze
-        uses: membrowse/membrowse-action@v1
-        with:
-          elf: build/lv_port_esp32.elf
-          ld: esp-idf/components/esp_system/ld/esp32.ld
-          target_name: esp32
-          api_key: ${{ secrets.MEMBROWSE_API_KEY }}
+      - name: MemBrowse report
+        run: |
+          pip install membrowse
+          membrowse report build/lv_port_esp32.elf sdkconfig --json > membrowse.json
 
-      # 6. Upload artifacts
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: esp32-membrowse
+          name: esp32-build
           path: |
             build/lv_port_esp32.elf
-            ${{ steps.analyze.outputs.report_path }}
+            membrowse.json
