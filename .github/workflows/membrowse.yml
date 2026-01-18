@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Checkout repo (with components)
+      # 1. Checkout repo
       - name: Checkout repository
         uses: actions/checkout@v3
         with:
@@ -23,12 +23,14 @@ jobs:
           esp_idf_version: v4.4
           target: esp32
 
-      # 3. Build firmware
+      # 3. Build firmware (IMPORTANT FIX)
       - name: Build firmware
+        shell: bash
         run: |
+          source $IDF_PATH/export.sh
           idf.py build
 
-      # 4. Ensure ELF exists
+      # 4. Verify ELF
       - name: Verify ELF
         run: |
           ls -lh build/*.elf
