@@ -10,34 +10,48 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # 1️⃣ Checkout repo
       - name: Checkout repo
         uses: actions/checkout@v4
         with:
           submodules: recursive
 
-      - name: Setup ESP-IDF v4.4
-        uses: espressif/esp-idf-action@v2
+      # 2️⃣ Install Python (needed for idf.py and MemBrowse)
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      # 3️⃣ Setup ESP-IDF (v4.4 is stable for your project)
+      - name: Setup ESP-IDF
+        uses: espressif/esp-idf-action@v1
         with:
           version: v4.4
 
+      # 4️⃣ Build firmware
       - name: Build firmware
         shell: bash
         run: |
+          echo "ESP-IDF path: $IDF_PATH"
           source $IDF_PATH/export.sh
           idf.py build
 
+      # 5️⃣ Verify ELF output
       - name: Verify ELF
         shell: bash
         run: |
-          ls build
+          ls -lah build
           test -f build/lvgl-demo.elf
 
+      # 6️⃣ Generate MemBrowse report
       - name: MemBrowse report
         shell: bash
         run: |
           pip install membrowse
+          # Replace lvgl-demo.elf with your actual target ELF
           membrowse report build/lvgl-demo.elf build/lvgl-demo.elf.ld --json > membrowse.json
 
+      # 7️⃣ Upload artifacts
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -46,4 +60,3 @@ jobs:
             build/lvgl-demo.elf
             build/lvgl-demo.elf.ld
             membrowse.json
-
