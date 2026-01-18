@@ -10,53 +10,56 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ Checkout repo
-      - name: Checkout repo
+      # 1️⃣ Checkout repo with submodules
+      - name: Checkout repository
         uses: actions/checkout@v4
         with:
           submodules: recursive
 
-      # 2️⃣ Install Python (needed for idf.py and MemBrowse)
+      # 2️⃣ Setup Python for MemBrowse
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
           python-version: "3.11"
 
-      # 3️⃣ Setup ESP-IDF (v4.4 is stable for your project)
+      # 3️⃣ Setup ESP-IDF (v5.1 recommended for esp_timer)
       - name: Setup ESP-IDF
         uses: espressif/esp-idf-action@v1
         with:
-          version: v4.4
+          version: v5.1  # use v4.4 if you want older stable
 
       # 4️⃣ Build firmware
-      - name: Build firmware
+      - name: Build ESP32 firmware
         shell: bash
         run: |
-          echo "ESP-IDF path: $IDF_PATH"
+          # Source ESP-IDF so idf.py is in PATH
           source $IDF_PATH/export.sh
+          
+          # Verify ESP-IDF is available
+          echo "Using ESP-IDF at: $IDF_PATH"
+          which idf.py
+          idf.py --version
+
+          # Build the firmware
           idf.py build
 
-      # 5️⃣ Verify ELF output
+      # 5️⃣ Verify ELF file exists
       - name: Verify ELF
-        shell: bash
         run: |
-          ls -lah build
-          test -f build/lvgl-demo.elf
+          test -f build/lv_port_esp32.elf || (echo "ELF not found!" && exit 1)
+          echo "ELF successfully built!"
 
       # 6️⃣ Generate MemBrowse report
       - name: MemBrowse report
-        shell: bash
         run: |
-          pip install membrowse
-          # Replace lvgl-demo.elf with your actual target ELF
-          membrowse report build/lvgl-demo.elf build/lvgl-demo.elf.ld --json > membrowse.json
+          pip install --no-cache-dir membrowse
+          membrowse report build/lv_port_esp32.elf sdkconfig --json > membrowse.json
 
-      # 7️⃣ Upload artifacts
+      # 7️⃣ Upload build artifacts
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: esp32-build
           path: |
-            build/lvgl-demo.elf
-            build/lvgl-demo.elf.ld
+            build/lv_port_esp32.elf
             membrowse.json
