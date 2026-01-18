@@ -15,30 +15,35 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Setup ESP-IDF
-        uses: espressif/esp-idf-ci-action@v1
+      - name: Setup ESP-IDF v4.4
+        uses: espressif/esp-idf-action@v2
         with:
-          esp_idf_version: v4.4
-          target: esp32
+          version: v4.4
 
       - name: Build firmware
         shell: bash
         run: |
+          source $IDF_PATH/export.sh
           idf.py build
 
       - name: Verify ELF
+        shell: bash
         run: |
-          test -f build/lv_port_esp32.elf
+          ls build
+          test -f build/lvgl-demo.elf
 
       - name: MemBrowse report
+        shell: bash
         run: |
           pip install membrowse
-          membrowse report build/lv_port_esp32.elf sdkconfig --json > membrowse.json
+          membrowse report build/lvgl-demo.elf build/lvgl-demo.elf.ld --json > membrowse.json
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: esp32-build
           path: |
-            build/lv_port_esp32.elf
+            build/lvgl-demo.elf
+            build/lvgl-demo.elf.ld
             membrowse.json
+
